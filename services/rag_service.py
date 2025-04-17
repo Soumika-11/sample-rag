@@ -2,6 +2,7 @@ from pathlib import Path
 from sentence_transformers import SentenceTransformer
 from PyPDF2 import PdfReader
 import faiss
+import json
 
 
 class RAGService:
@@ -13,7 +14,9 @@ class RAGService:
         self.medical_data = []
 
     def _rag_exists(self):
-        return (self.rag_dir / "index.faiss").exists()
+        index_exists = (self.rag_dir / "index.faiss").exists()
+        data_exists = (self.rag_dir / "medical_data.json").exists()
+        return index_exists and data_exists
 
     def _create_rag(self):
         print("Creating RAG...")
@@ -44,12 +47,21 @@ class RAGService:
         self.index = faiss.IndexFlatL2(embeddings.shape[1])
         self.index.add(embeddings)
 
+        # Save medical data to JSON
+        with open(self.rag_dir / "medical_data.json", "w") as f:
+            json.dump(self.medical_data, f)
+
         faiss.write_index(self.index, str(self.rag_dir / "index.faiss"))
         print("RAG created and saved.")
 
     def _load_rag(self):
         print("Loading existing RAG...")
         self.index = faiss.read_index(str(self.rag_dir / "index.faiss"))
+
+        # Load medical data from JSON
+        with open(self.rag_dir / "medical_data.json", "r") as f:
+            self.medical_data = json.load(f)
+
         print("RAG loaded.")
 
     def query(self, question):
