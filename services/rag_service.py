@@ -34,10 +34,23 @@ class RAGService:
                 lines.extend(page.extract_text().splitlines())
 
             for line in lines[2:]:
-                parts = line.split(" ", 1)
-                if len(parts) == 2:
+                # Expecting line format: ICD10_CODE HCC_CODE Description
+                parts = line.split(" ", 2)
+                if len(parts) == 3:
+                    icd10_code, hcc_code, name = parts
+                    self.medical_data.append({
+                        "icd10_code": icd10_code,
+                        "hcc_code": hcc_code,
+                        "name": name.strip()
+                    })
+                    texts.append(name.strip())
+                elif len(parts) == 2:
                     code, name = parts
-                    self.medical_data.append({"code": code, "name": name.strip()})
+                    self.medical_data.append({
+                        "icd10_code": code,
+                        "hcc_code": None,
+                        "name": name.strip()
+                    })
                     texts.append(name.strip())
 
         print("Generating embeddings...")
@@ -77,6 +90,11 @@ class RAGService:
         results = []
         for idx in indices[0]:
             if idx < len(self.medical_data):
-                results.append(self.medical_data[idx])
+                entry = self.medical_data[idx]
+                results.append({
+                    "icd10_code": entry.get("icd10_code"),
+                    "hcc_code": entry.get("hcc_code"),
+                    "name": entry.get("name")
+                })
 
         return {"results": results}
